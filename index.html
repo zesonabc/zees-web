@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer" />
     <title>苹巨匠科技 - 软件安装指南</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -45,17 +46,33 @@
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
 
-        // =================================================================
-        // 🔥 您的 CSV 链接 🔥
-        // =================================================================
+        // 🔥 您的表格链接 (已保留)
         const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSDxHKTm1kyGyDDiOy0-2doHJCprjfQ7-8DvO1yA1qr4UFpfnaSEMviKud1zeInjTSftqCs3GM3LYqb/pub?output=csv"; 
+
+        // 🛠️ 新增：智能 BV 号提取器
+        const extractBV = (input) => {
+            if (!input) return null;
+            // 情况1：如果包含 bvid= (通常在 iframe 代码里)
+            const matchEmbed = input.match(/bvid=(BV[a-zA-Z0-9]+)/);
+            if (matchEmbed) return matchEmbed[1];
+            
+            // 情况2：如果包含 /video/ (通常是网页链接)
+            const matchLink = input.match(/video\/(BV[a-zA-Z0-9]+)/);
+            if (matchLink) return matchLink[1];
+
+            // 情况3：假设用户填的就是纯 BV 号，直接返回
+            // 简单的正则判断是否以 BV 开头
+            if (input.trim().startsWith('BV')) return input.trim();
+
+            return input; // 如果实在识别不出来，就原样返回试试
+        };
 
         const Icon = ({ children, className, size = 20, ...props }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>);
         const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></Icon>;
         const CloudDownload = (p) => <Icon {...p}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></Icon>;
         const HardDrive = (p) => <Icon {...p}><line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></Icon>;
         const VideoIcon = (p) => <Icon {...p}><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2" ry="2"/></Icon>;
-        const Play = (p) => <Icon {...p}><polygon points="5 3 19 12 5 21 5 3"/></Icon>; // 新增播放图标
+        const Play = (p) => <Icon {...p}><polygon points="5 3 19 12 5 21 5 3"/></Icon>;
         const Inbox = (p) => <Icon {...p}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></Icon>;
 
         const Header = () => (
@@ -79,20 +96,21 @@
 
         const SoftwareCard = ({ item }) => {
             const [copied, setCopied] = useState(false);
-            const [isPlaying, setIsPlaying] = useState(false); // 新增：控制是否播放的状态
+            const [isPlaying, setIsPlaying] = useState(false);
             
             const handleCopy = () => { navigator.clipboard.writeText('sudo spctl --master-disable'); setCopied(true); setTimeout(() => setCopied(false), 2000); };
             
-            const isBilibili = item.bvid && item.bvid.startsWith('BV');
-            // 点击后才加载 iframe，并添加 autoplay=1 确保点击即播
-            const videoSrc = isBilibili ? `//player.bilibili.com/player.html?bvid=${item.bvid}&page=1&high_quality=1&danmaku=0&autoplay=1` : item.bvid;
+            // 使用智能提取器获取干净的 ID
+            const rawBvid = item.bvid;
+            const cleanBvid = extractBV(rawBvid);
+            const isBilibili = cleanBvid && cleanBvid.startsWith('BV');
+            const videoSrc = isBilibili ? `//player.bilibili.com/player.html?bvid=${cleanBvid}&page=1&high_quality=1&danmaku=0&autoplay=1` : rawBvid;
 
             return (
                 <div className="bg-slate-900/85 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-xl flex flex-col lg:flex-row animate-fade-in-up">
                     <div className="lg:w-7/12 p-5 flex flex-col w-full">
                         <div className="flex items-center gap-3 mb-3"><div className="p-2 bg-blue-500/20 rounded-lg"><VideoIcon className="w-5 h-5 text-blue-300" /></div><h2 className="text-lg font-bold text-white line-clamp-1">{item.title}</h2></div>
                         
-                        {/* 视频播放区域优化：点击才加载 */}
                         <div className="relative aspect-video bg-black rounded-lg overflow-hidden border border-white/10 group">
                             {isBilibili ? (
                                 isPlaying ? (
@@ -142,14 +160,12 @@
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
-                // 加时间戳防止缓存
                 const cacheBuster = "&t=" + Date.now();
                 Papa.parse(SHEET_URL + cacheBuster, {
                     download: true,
                     header: true,
                     complete: (results) => {
                         console.log("表格数据:", results.data);
-                        // 过滤空行并倒序，让最新的显示在最上面
                         setSoftwareData(results.data.filter(item => item.title).reverse()); 
                         setLoading(false);
                     },
