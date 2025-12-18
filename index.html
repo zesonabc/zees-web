@@ -49,22 +49,15 @@
         // 🔥 您的表格链接 (已保留)
         const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSDxHKTm1kyGyDDiOy0-2doHJCprjfQ7-8DvO1yA1qr4UFpfnaSEMviKud1zeInjTSftqCs3GM3LYqb/pub?output=csv"; 
 
-        // 🛠️ 新增：智能 BV 号提取器
+        // 🛠️ 智能 BV 号提取器 (即使填了 iframe 代码也能自动修正)
         const extractBV = (input) => {
             if (!input) return null;
-            // 情况1：如果包含 bvid= (通常在 iframe 代码里)
             const matchEmbed = input.match(/bvid=(BV[a-zA-Z0-9]+)/);
             if (matchEmbed) return matchEmbed[1];
-            
-            // 情况2：如果包含 /video/ (通常是网页链接)
             const matchLink = input.match(/video\/(BV[a-zA-Z0-9]+)/);
             if (matchLink) return matchLink[1];
-
-            // 情况3：假设用户填的就是纯 BV 号，直接返回
-            // 简单的正则判断是否以 BV 开头
             if (input.trim().startsWith('BV')) return input.trim();
-
-            return input; // 如果实在识别不出来，就原样返回试试
+            return input; 
         };
 
         const Icon = ({ children, className, size = 20, ...props }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>);
@@ -100,7 +93,7 @@
             
             const handleCopy = () => { navigator.clipboard.writeText('sudo spctl --master-disable'); setCopied(true); setTimeout(() => setCopied(false), 2000); };
             
-            // 使用智能提取器获取干净的 ID
+            // 智能提取 BV 号
             const rawBvid = item.bvid;
             const cleanBvid = extractBV(rawBvid);
             const isBilibili = cleanBvid && cleanBvid.startsWith('BV');
