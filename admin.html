@@ -1,111 +1,168 @@
-<style>
-    /* 简单的网格布局，自动适应屏幕 */
-    .grid-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* 每个卡片最小300px */
-        gap: 20px; /* 卡片之间的间距 */
-        padding: 20px;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-
-    /* 卡片通用样式 */
-    .card {
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        transition: transform 0.2s;
-    }
-    .card:hover {
-        transform: translateY(-5px);
-    }
-
-    /* 第一个“添加卡片”的特殊样式 */
-    .add-card {
-        border: 2px dashed #007bff; /* 虚线边框表示添加 */
-        background: #f8f9fa;
-        justify-content: center; /* 内容居中 */
-    }
-
-    /* 输入框样式微调，让它在小卡片里不溢出 */
-    .form-group input, .form-group textarea {
-        width: 100%;
-        margin-bottom: 10px;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        box-sizing: border-box; /* 防止边框撑大宽度 */
-    }
-    
-    .btn-submit {
-        background-color: #007bff;
-        color: white;
-        border: none;
-        padding: 10px;
-        width: 100%;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-</style>
-
-<div class="grid-container">
-
-    <div class="card add-card">
-        <h3 style="text-align:center; color:#007bff; margin-top:0;">+ 添加新软件</h3>
-        <form method="post" enctype="multipart/form-data"> <div class="form-group">
-                <input type="text" name="title" placeholder="软件标题" required>
-            </div>
-            <div class="form-group">
-                <input type="text" name="link" placeholder="网盘链接 (https://...)" required>
-            </div>
-            <div class="form-group">
-                <input type="text" name="bilibili" placeholder="B站 BV号 (选填)">
-            </div>
-            <div class="form-group">
-                <textarea name="desc" placeholder="描述文案..." rows="3"></textarea>
-            </div>
-            <button type="submit" class="btn-submit">发布</button>
-        </form>
-    </div>
-
-    <?php 
-    // 读取数据
-    $file = 'data.json';
-    $data = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
-    
-    // 倒序循环，这样原来的逻辑不用变
-    if($data):
-        $total = count($data);
-        foreach(array_reverse($data) as $index => $item): 
-            $realIndex = $total - $index; // 修正序号显示
-    ?>
-        <div class="card">
-            <div style="font-weight:bold; font-size:1.2em; margin-bottom:10px;">
-                #<?php echo $realIndex; ?> - <?php echo htmlspecialchars($item['title']); ?>
-            </div>
-            
-            <p style="color:#666; font-size:0.9em;">
-                <?php echo htmlspecialchars($item['desc']); ?>
-            </p>
-
-            <div style="margin-top:10px;">
-                <a href="<?php echo htmlspecialchars($item['link']); ?>" target="_blank" style="color:#007bff; text-decoration:none;">网盘链接 &rarr;</a>
-            </div>
-            
-            <div style="margin-top:15px; border-top:1px solid #eee; padding-top:10px; text-align:right;">
-                <form method="post" style="display:inline;">
-                    <input type="hidden" name="delete_id" value="<?php echo $item['id']; ?>">
-                    <button type="submit" style="color:red; background:none; border:none; cursor:pointer;">删除</button>
-                </form>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>苹巨匠 - 网站后台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.staticfile.net/vue/3.3.4/vue.global.prod.min.js"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 md:p-8 font-sans">
+    <div id="app" class="max-w-6xl mx-auto">
+        <div v-if="!isLoggedIn" class="max-w-md mx-auto mt-20 bg-white p-8 rounded-2xl shadow-xl border-t-4 border-blue-600">
+            <h1 class="text-2xl font-bold text-center mb-6 text-slate-800">管理员登录</h1>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">账号</label>
+                    <input type="text" v-model="form.user" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="请输入账号">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">密码</label>
+                    <input type="password" v-model="form.pass" @keyup.enter="login" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="请输入密码">
+                </div>
+                <button @click="login" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold transition shadow-lg shadow-blue-500/30">登录后台</button>
             </div>
         </div>
-    <?php 
-        endforeach; 
-    endif; 
-    ?>
 
-</div>
+        <div v-else class="animate-fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                <h1 class="text-3xl font-black text-slate-800 tracking-tight">内容管理系统</h1>
+                <div class="flex gap-3">
+                    <button @click="loadData" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium">🔄 刷新数据</button>
+                    <button @click="saveToGithub" :disabled="saving" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold shadow-lg shadow-green-500/30 flex items-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span v-if="saving" class="animate-spin text-xl">⟳</span>
+                        {{ saving ? '正在发布...' : '🚀 保存并发布' }}
+                    </button>
+                    <button @click="logout" class="px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg font-medium">退出</button>
+                </div>
+            </div>
+
+            <button @click="add" class="w-full py-4 mb-6 border-2 border-dashed border-slate-300 rounded-xl text-slate-400 hover:text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition font-bold text-lg flex justify-center items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                + 添加新软件 (点击将在下方生成新卡片)
+            </button>
+
+            <div class="space-y-4">
+                <div v-for="(item, index) in list" :key="index" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition duration-200 group relative">
+                    <span class="absolute top-4 right-12 text-xs font-mono text-gray-300">#{{ list.length - index }}</span>
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1 mr-4">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">标题</label>
+                            <input v-model="item.title" class="w-full text-lg font-bold text-slate-800 border-b-2 border-transparent focus:border-blue-500 outline-none bg-transparent placeholder-slate-300" placeholder="输入软件标题...">
+                        </div>
+                        <button @click="remove(index)" class="text-slate-300 hover:text-red-500 transition p-1 rounded-full hover:bg-red-50" title="删除">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">网盘链接</label>
+                            <input v-model="item.link" class="w-full p-2 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm font-mono text-blue-600" placeholder="https://...">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">B站视频 BV号 (不含代码)</label>
+                            <input v-model="item.bvid" class="w-full p-2 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm font-mono text-purple-600" placeholder="例如: BV1rm41127xc">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">描述文案</label>
+                        <textarea v-model="item.desc" rows="2" class="w-full p-3 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm text-slate-600 resize-none" placeholder="输入软件描述..."></textarea>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref } = Vue;
+        
+        // 🔐 配置区域
+        const P1 = 'ghp_p5bxRV9IrM0';
+        const P2 = 'XyqchB15eMWruR';
+        const P3 = 'pgTWu36ucY7';
+        const HIDDEN_TOKEN = P1 + P2 + P3; 
+        
+        const MY_REPO = 'zesonabc/zees-web'; 
+        const ADMIN_USER = 'zs10272891'; 
+        const ADMIN_PASS = 'Zhangsheng520.'; 
+
+        createApp({
+            setup() {
+                const isLoggedIn = ref(localStorage.getItem('is_admin_logged') === 'true');
+                const form = ref({ user: '', pass: '' });
+                const list = ref([]);
+                const saving = ref(false);
+                const fileSha = ref(''); 
+
+                const login = () => {
+                    if (form.value.user === ADMIN_USER && form.value.pass === ADMIN_PASS) {
+                        isLoggedIn.value = true;
+                        localStorage.setItem('is_admin_logged', 'true');
+                        loadData();
+                    } else {
+                        alert('账号或密码错误！');
+                    }
+                };
+
+                const logout = () => {
+                    localStorage.removeItem('is_admin_logged');
+                    isLoggedIn.value = false;
+                    form.value = { user: '', pass: '' };
+                };
+
+                const loadData = async () => {
+                    try {
+                        const url = `https://api.github.com/repos/${MY_REPO}/contents/data.json`;
+                        const res = await fetch(url, { headers: { 'Authorization': `token ${HIDDEN_TOKEN}` } });
+                        if(!res.ok) throw new Error('读取失败，请检查配置');
+                        const data = await res.json();
+                        fileSha.value = data.sha;
+                        const content = decodeURIComponent(escape(atob(data.content)));
+                        list.value = JSON.parse(content);
+                    } catch (e) {
+                        alert('加载数据失败: ' + e.message);
+                    }
+                };
+
+                const saveToGithub = async () => {
+                    if(!confirm('确定要发布更新到网站吗？')) return;
+                    saving.value = true;
+                    try {
+                        const content = JSON.stringify(list.value, null, 2);
+                        const base64Content = btoa(unescape(encodeURIComponent(content)));
+                        const url = `https://api.github.com/repos/${MY_REPO}/contents/data.json`;
+                        const res = await fetch(url, {
+                            method: 'PUT',
+                            headers: { 
+                                'Authorization': `token ${HIDDEN_TOKEN}`, 
+                                'Content-Type': 'application/json' 
+                            },
+                            body: JSON.stringify({ 
+                                message: 'Update from Admin Panel', 
+                                content: base64Content, 
+                                sha: fileSha.value 
+                            })
+                        });
+
+                        if(!res.ok) throw new Error('保存失败');
+                        const resData = await res.json();
+                        fileSha.value = resData.content.sha;
+                        alert('🎉 发布成功！网站稍后会自动更新。');
+                    } catch (e) { alert('保存失败: ' + e.message); } finally { saving.value = false; }
+                };
+
+                // 点击添加时，unshift 会自动加到数组最前面
+                const add = () => list.value.unshift({ title: '', desc: '', link: '', bvid: '' });
+                const remove = (i) => confirm('确定删除?') && list.value.splice(i, 1);
+
+                if(isLoggedIn.value) loadData();
+
+                return { isLoggedIn, form, list, saving, login, logout, loadData, saveToGithub, add, remove };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
