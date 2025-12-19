@@ -3,147 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>苹巨匠 - 网站后台</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.staticfile.net/vue/3.3.4/vue.global.prod.min.js"></script>
-</head>
-<body class="bg-slate-100 min-h-screen p-4 md:p-8 font-sans">
-    <div id="app" class="max-w-6xl mx-auto">
-        <div v-if="!token" class="max-w-md mx-auto mt-20 bg-white p-8 rounded-2xl shadow-xl">
-            <h1 class="text-2xl font-bold text-center mb-6 text-slate-800">管理员登录</h1>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1">GitHub Token (密钥)</label>
-                    <input type="password" v-model="inputToken" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="粘贴 ghp_ 开头的密钥">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1">仓库路径</label>
-                    <input type="text" v-model="repo" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="用户名/仓库名">
-                    <p class="text-xs text-gray-400 mt-1">例如: zesonabc/zees-web</p>
-                </div>
-                <button @click="saveConfig" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold transition shadow-lg shadow-blue-500/30">进入后台</button>
-            </div>
-        </div>
-
-        <div v-else class="animate-fade-in">
-            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                <h1 class="text-3xl font-black text-slate-800 tracking-tight">内容管理系统</h1>
-                <div class="flex gap-3">
-                    <button @click="loadData" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium">🔄 刷新</button>
-                    <button @click="saveToGithub" :disabled="saving" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold shadow-lg shadow-green-500/30 flex items-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span v-if="saving" class="animate-spin text-xl">⟳</span>
-                        {{ saving ? '正在发布...' : '🚀 保存并发布' }}
-                    </button>
-                    <button @click="logout" class="px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg font-medium">退出</button>
-                </div>
-            </div>
-
-            <div class="space-y-4">
-                <div v-for="(item, index) in list" :key="index" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition duration-200 group">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex-1 mr-4">
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">标题</label>
-                            <input v-model="item.title" class="w-full text-lg font-bold text-slate-800 border-b-2 border-transparent focus:border-blue-500 outline-none bg-transparent placeholder-slate-300" placeholder="输入软件标题...">
-                        </div>
-                        <button @click="remove(index)" class="text-slate-300 hover:text-red-500 transition p-1 rounded-full hover:bg-red-50">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">网盘链接</label>
-                            <input v-model="item.link" class="w-full p-2 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm font-mono text-blue-600" placeholder="https://...">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">B站视频 BV号 (不含代码)</label>
-                            <input v-model="item.bvid" class="w-full p-2 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm font-mono text-purple-600" placeholder="例如: BV1rm41127xc">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">描述文案</label>
-                        <textarea v-model="item.desc" rows="2" class="w-full p-3 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm text-slate-600 resize-none" placeholder="输入软件描述..."></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <button @click="add" class="w-full py-4 mt-6 border-2 border-dashed border-slate-300 rounded-xl text-slate-400 hover:text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition font-bold text-lg flex justify-center items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                添加新软件
-            </button>
-        </div>
-    </div>
-
+    <meta name="referrer" content="no-referrer" />
+    <link rel="preconnect" href="https://player.bilibili.com" />
+    <title>苹巨匠科技 - 软件安装指南</title>
+    
+    <script src="https://cdn.staticfile.net/tailwindcss/3.4.1/js/cdn.min.js"></script>
+    <script src="https://cdn.staticfile.net/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.staticfile.net/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.staticfile.net/babel-standalone/7.23.5/babel.min.js"></script>
+    
     <script>
-        const { createApp, ref } = Vue;
-        createApp({
-            setup() {
-                const token = ref(localStorage.getItem('gh_token') || '');
-                const repo = ref(localStorage.getItem('gh_repo') || 'zesonabc/zees-web');
-                const inputToken = ref('');
-                const list = ref([]);
-                const saving = ref(false);
-                const fileSha = ref(''); 
+      tailwind.config = { theme: { extend: { colors: { slate: { 850: '#151e32' } }, animation: { 'fade-in-up': 'fadeInUp 0.5s ease-out' }, keyframes: { fadeInUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } } } } }
+    </script>
+    <style>body { background: #0f172a url('https://images.unsplash.com/photo-1531297461136-82lw9z0u0.jpg') center/cover fixed no-repeat; color: #f1f5f9; } .custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.6); border-radius: 4px; }</style>
+</head>
+<body class="antialiased">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+        
+        // 指向你的数据文件
+        const DATA_URL = "./data.json"; 
 
-                const saveConfig = () => {
-                    if(!inputToken.value) return alert('请输入 Token');
-                    if(!inputToken.value.startsWith('ghp_')) alert('⚠️ 提示: Token 通常以 ghp_ 开头，请检查是否复制正确');
-                    localStorage.setItem('gh_token', inputToken.value);
-                    localStorage.setItem('gh_repo', repo.value);
-                    token.value = inputToken.value;
-                    loadData();
-                };
+        // BV号提取器
+        const extractBV = (input) => {
+            if (!input) return null;
+            const match = input.match(/(BV[a-zA-Z0-9]+)/);
+            return match ? match[1] : input;
+        };
 
-                const logout = () => {
-                    localStorage.removeItem('gh_token');
-                    token.value = '';
-                    inputToken.value = '';
-                };
+        // 🔧 修复点：这里重新加上了 size 属性的处理
+        const Icon = ({ children, size = 24, className, ...p }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...p}>
+                {children}
+            </svg>
+        );
+        
+        const Play = (p) => <Icon {...p}><polygon points="5 3 19 12 5 21 5 3"/></Icon>;
+        const CloudDownload = (p) => <Icon {...p}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></Icon>;
 
-                const loadData = async () => {
-                    try {
-                        const url = `https://api.github.com/repos/${repo.value}/contents/data.json`;
-                        const res = await fetch(url, { headers: { 'Authorization': `token ${token.value}` } });
-                        if(!res.ok) throw new Error('读取失败！请检查 Token 是否正确，或者仓库名是否写对 (注意大小写)');
-                        const data = await res.json();
-                        fileSha.value = data.sha;
-                        // 解决中文乱码问题
-                        const content = decodeURIComponent(escape(atob(data.content)));
-                        list.value = JSON.parse(content);
-                    } catch (e) {
-                        alert('加载失败: ' + e.message);
-                        if(e.message.includes('404')) alert('找不到 data.json 文件，请确认第1步是否创建成功');
-                    }
-                };
+        const SoftwareCard = ({ item }) => {
+            const [copied, setCopied] = useState(false);
+            const [isPlaying, setIsPlaying] = useState(false);
+            
+            const handleCopy = () => { navigator.clipboard.writeText('sudo spctl --master-disable'); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+            const cleanBvid = extractBV(item.bvid || '');
+            const videoSrc = cleanBvid ? `//player.bilibili.com/player.html?bvid=${cleanBvid}&page=1&high_quality=1&danmaku=0&autoplay=1` : '';
 
-                const saveToGithub = async () => {
-                    if(!confirm('确定要发布更新到网站吗？')) return;
-                    saving.value = true;
-                    try {
-                        const content = JSON.stringify(list.value, null, 2);
-                        const base64Content = btoa(unescape(encodeURIComponent(content)));
-                        const url = `https://api.github.com/repos/${repo.value}/contents/data.json`;
-                        const res = await fetch(url, {
-                            method: 'PUT',
-                            headers: { 'Authorization': `token ${token.value}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ message: 'Update from Admin', content: base64Content, sha: fileSha.value })
-                        });
-                        if(!res.ok) throw new Error('保存失败');
-                        const resData = await res.json();
-                        fileSha.value = resData.content.sha;
-                        alert('🎉 发布成功！网站稍后会自动更新。');
-                    } catch (e) { alert('保存失败: ' + e.message); } finally { saving.value = false; }
-                };
+            return (
+                <div className="bg-slate-900/85 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-xl flex flex-col lg:flex-row animate-fade-in-up hover:border-blue-500/30 transition-all mb-8">
+                    <div className="lg:w-7/12 p-5 flex flex-col w-full">
+                        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                            <span className="w-1 h-6 bg-blue-500 rounded-full"></span>{item.title}
+                        </h2>
+                        <div className="relative aspect-video bg-black rounded-lg overflow-hidden border border-white/10 group">
+                            {cleanBvid ? (
+                                isPlaying ? (
+                                    <iframe src={videoSrc} className="absolute inset-0 w-full h-full z-20" allowFullScreen scrolling="no" frameBorder="0" allow="autoplay" />
+                                ) : (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer group" style={{background: 'linear-gradient(135deg, #1e293b, #0f172a)'}} onClick={() => setIsPlaying(true)}>
+                                        <div className="relative z-10 w-16 h-16 bg-blue-600/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"><Play size={32} className="ml-1 text-white fill-current" /></div>
+                                        <span className="mt-3 text-sm font-medium text-white/90 bg-black/50 px-3 py-1 rounded-full">点击播放教程</span>
+                                    </div>
+                                )
+                            ) : <div className="absolute inset-0 flex items-center justify-center text-slate-500">无预览视频</div>}
+                        </div>
+                        <div className="mt-4">
+                            {item.link && <a href={item.link} target="_blank" className="block w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold text-center shadow-lg transition flex items-center justify-center gap-2"><CloudDownload size={20}/> 下载网盘资源</a>}
+                        </div>
+                    </div>
+                    <div className="lg:w-5/12 p-5 bg-black/20 border-l border-white/5 flex flex-col">
+                        <div className="mb-4 bg-black/40 border border-white/10 rounded-lg p-3 cursor-pointer hover:bg-black/60 transition" onClick={handleCopy}>
+                            <div className="flex justify-between mb-1"><span className="text-xs text-slate-400">点击复制开启命令：</span>{copied && <span className="text-[10px] text-green-400">已复制!</span>}</div>
+                            <code className="text-xs font-mono text-green-400">sudo spctl --master-disable</code>
+                        </div>
+                        <p className="text-slate-300 text-sm whitespace-pre-line leading-relaxed flex-1">{item.desc}</p>
+                    </div>
+                </div>
+            );
+        };
+        
+        const App = () => {
+            const [searchQuery, setSearchQuery] = useState('');
+            const [list, setList] = useState([]);
+            const [loading, setLoading] = useState(true);
 
-                const add = () => list.value.unshift({ title: '', desc: '', link: '', bvid: '' });
-                const remove = (i) => confirm('确定删除这个软件吗?') && list.value.splice(i, 1);
+            useEffect(() => {
+                fetch(DATA_URL + '?t=' + Date.now()).then(r => r.json()).then(data => {
+                    setList(data); setLoading(false);
+                }).catch(e => { console.error(e); setLoading(false); });
+            }, []);
 
-                if(token.value) loadData();
+            const filtered = useMemo(() => list.filter(i => !searchQuery || JSON.stringify(i).toLowerCase().includes(searchQuery.toLowerCase())), [searchQuery, list]);
 
-                return { token, repo, inputToken, list, saving, saveConfig, logout, loadData, saveToGithub, add, remove };
-            }
-        }).mount('#app');
+            return (
+                <div className="min-h-screen container mx-auto px-4 py-10 max-w-5xl pb-20">
+                    <h1 className="text-4xl md:text-5xl font-black text-center mb-8"><span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">苹巨匠科技</span></h1>
+                    <input type="text" className="w-full max-w-xl mx-auto block bg-slate-900/80 backdrop-blur border border-slate-700 rounded-full py-4 px-6 text-white text-lg mb-12 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-900 transition-all shadow-xl placeholder-slate-500" placeholder="🔍 搜索软件名称..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    
+                    {loading ? (
+                        <div className="text-center py-20 text-slate-500 animate-pulse">正在加载最新数据...</div>
+                    ) : filtered.length > 0 ? (
+                        filtered.map((item, i) => <SoftwareCard key={i} item={item} />)
+                    ) : (
+                        <div className="text-center py-20 text-slate-500">未找到相关内容</div>
+                    )}
+                    
+                    <footer className="mt-12 text-center text-slate-600 text-sm">&copy; 2025 苹巨匠科技</footer>
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
