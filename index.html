@@ -5,256 +5,106 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer" />
     <link rel="preconnect" href="https://player.bilibili.com" />
-    <link rel="preconnect" href="https://i0.hdslb.com" />
     <title>苹巨匠科技 - 软件安装指南</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
+    <script src="https://cdn.staticfile.net/tailwindcss/3.4.1/js/cdn.min.js"></script>
+    <script src="https://cdn.staticfile.net/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.staticfile.net/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.staticfile.net/babel-standalone/7.23.5/babel.min.js"></script>
+
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: { sans: ['Inter', 'Microsoft YaHei', 'sans-serif'] },
-            colors: { slate: { 850: '#151e32' } },
-            animation: { 
-                'fade-in-up': 'fadeInUp 0.7s ease-out',
-                'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-            },
-            keyframes: { fadeInUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }
-          },
-        },
-      }
+      tailwind.config = { theme: { extend: { colors: { slate: { 850: '#151e32' } }, animation: { 'fade-in-up': 'fadeInUp 0.5s ease-out' }, keyframes: { fadeInUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } } } } }
     </script>
-    <style>
-      body { 
-          background-color: #0f172a;
-          background-image: url('https://images.unsplash.com/photo-1531297461136-82lw9z0u0.jpg');
-          background-repeat: no-repeat;
-          background-position: center center;
-          background-attachment: fixed;
-          background-size: cover;
-          color: #f1f5f9; 
-      }
-      /* 隐藏滚动条但保留功能 */
-      .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-      .custom-scrollbar::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.3); border-radius: 4px; }
-      .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.6); border-radius: 4px; }
-    </style>
+    <style>body { background: #0f172a url('https://images.unsplash.com/photo-1531297461136-82lw9z0u0.jpg') center/cover fixed no-repeat; color: #f1f5f9; } .custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.6); border-radius: 4px; }</style>
 </head>
-<body class="antialiased selection:bg-blue-500 selection:text-white">
+<body class="antialiased">
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
 
-        // 🔥 您的表格链接
-        const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSDxHKTm1kyGyDDiOy0-2doHJCprjfQ7-8DvO1yA1qr4UFpfnaSEMviKud1zeInjTSftqCs3GM3LYqb/pub?output=csv"; 
+        // 🔥 这里已经自动指向你的 data.json 文件
+        const DATA_URL = "./data.json"; 
 
-        // 🛠️ 智能 BV 号提取器
+        // BV号提取器
         const extractBV = (input) => {
             if (!input) return null;
-            const matchEmbed = input.match(/bvid=(BV[a-zA-Z0-9]+)/);
-            if (matchEmbed) return matchEmbed[1];
-            const matchLink = input.match(/video\/(BV[a-zA-Z0-9]+)/);
-            if (matchLink) return matchLink[1];
-            if (input.trim().startsWith('BV')) return input.trim();
-            return input; 
+            const match = input.match(/(BV[a-zA-Z0-9]+)/);
+            return match ? match[1] : input;
         };
 
-        const Icon = ({ children, className, size = 20, ...props }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>);
-        const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></Icon>;
-        const CloudDownload = (p) => <Icon {...p}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></Icon>;
-        const HardDrive = (p) => <Icon {...p}><line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></Icon>;
-        const VideoIcon = (p) => <Icon {...p}><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2" ry="2"/></Icon>;
+        const Icon = ({ children, ...p }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>{children}</svg>;
         const Play = (p) => <Icon {...p}><polygon points="5 3 19 12 5 21 5 3"/></Icon>;
-        const Inbox = (p) => <Icon {...p}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></Icon>;
-        const Spinner = () => <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
-
-        const Header = () => (
-            <div className="text-center py-12 relative overflow-hidden animate-fade-in">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-64 bg-blue-600/10 blur-[100px] rounded-full -z-10 pointer-events-none" />
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-4 animate-fade-in-up" style={{animationDelay: '0.1s'}}>
-                    <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">苹巨匠科技</span>
-                </h1>
-                <p className="text-slate-400 max-w-2xl mx-auto text-lg leading-relaxed animate-fade-in-up" style={{animationDelay: '0.2s'}}>精选 Mac 生产力工具，提供最详细的视频安装教程与高速下载通道。</p>
-            </div>
-        );
-
-        const SearchBar = ({ value, onChange }) => (
-            <div className="sticky top-4 z-40 max-w-2xl mx-auto px-4 mb-6 animate-fade-in-up" style={{animationDelay: '0.3s'}}>
-                <div className="relative flex items-center bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-full shadow-2xl">
-                    <Search className="absolute left-4 text-slate-400 w-5 h-5" />
-                    <input type="text" className="w-full bg-transparent border-none py-4 pl-12 pr-6 text-slate-100 placeholder-slate-500 focus:outline-none text-lg rounded-full" placeholder="搜索软件..." value={value} onChange={(e) => onChange(e.target.value)} />
-                </div>
-            </div>
-        );
-
-        // 💀 骨架屏组件：加载时显示的高级占位符
-        const SkeletonCard = () => (
-            <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 flex flex-col lg:flex-row gap-5 animate-pulse">
-                <div className="lg:w-7/12 flex flex-col gap-4">
-                    <div className="h-6 bg-slate-800 rounded w-1/3"></div>
-                    <div className="aspect-video bg-slate-800 rounded-lg"></div>
-                    <div className="flex gap-3">
-                        <div className="h-12 bg-slate-800 rounded-xl flex-1"></div>
-                        <div className="h-12 bg-slate-800 rounded-xl flex-1"></div>
-                    </div>
-                </div>
-                <div className="lg:w-5/12 flex flex-col gap-4">
-                    <div className="h-24 bg-slate-800 rounded-lg"></div>
-                    <div className="h-20 bg-slate-800 rounded-lg mt-auto"></div>
-                </div>
-            </div>
-        );
+        const CloudDownload = (p) => <Icon {...p}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></Icon>;
 
         const SoftwareCard = ({ item }) => {
             const [copied, setCopied] = useState(false);
             const [isPlaying, setIsPlaying] = useState(false);
-            const [videoLoading, setVideoLoading] = useState(false); // 视频加载状态
-            
+
             const handleCopy = () => { navigator.clipboard.writeText('sudo spctl --master-disable'); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-            
-            // 智能提取 BV 号
-            const rawBvid = item.bvid;
-            const cleanBvid = extractBV(rawBvid);
-            const isBilibili = cleanBvid && cleanBvid.startsWith('BV');
-            const videoSrc = isBilibili ? `//player.bilibili.com/player.html?bvid=${cleanBvid}&page=1&high_quality=1&danmaku=0&autoplay=1` : rawBvid;
-
-            // 处理点击播放
-            const handlePlay = () => {
-                setIsPlaying(true);
-                setVideoLoading(true); // 开始加载，显示转圈
-            };
-
-            // 封面图逻辑：如果有 cover 列则使用，否则使用默认渐变
-            const coverStyle = item.cover 
-                ? { backgroundImage: `url(${item.cover})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-                : { background: 'linear-gradient(to bottom right, #1e293b, #0f172a)' };
+            const cleanBvid = extractBV(item.bvid || '');
+            const videoSrc = cleanBvid ? `//player.bilibili.com/player.html?bvid=${cleanBvid}&page=1&high_quality=1&danmaku=0&autoplay=1` : '';
 
             return (
-                <div className="bg-slate-900/85 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-xl flex flex-col lg:flex-row animate-fade-in-up transition-all hover:border-white/20">
+                <div className="bg-slate-900/85 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-xl flex flex-col lg:flex-row animate-fade-in-up hover:border-blue-500/30 transition-all mb-8">
                     <div className="lg:w-7/12 p-5 flex flex-col w-full">
-                        <div className="flex items-center gap-3 mb-3"><div className="p-2 bg-blue-500/20 rounded-lg"><VideoIcon className="w-5 h-5 text-blue-300" /></div><h2 className="text-lg font-bold text-white line-clamp-1">{item.title}</h2></div>
-                        
+                        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                            <span className="w-1 h-6 bg-blue-500 rounded-full"></span>{item.title}
+                        </h2>
                         <div className="relative aspect-video bg-black rounded-lg overflow-hidden border border-white/10 group">
-                            {isBilibili ? (
+                            {cleanBvid ? (
                                 isPlaying ? (
-                                    <>
-                                        {/* 加载时的转圈圈 */}
-                                        {videoLoading && (
-                                            <div className="absolute inset-0 flex items-center justify-center z-10 bg-slate-900">
-                                                <Spinner />
-                                            </div>
-                                        )}
-                                        <iframe 
-                                            src={videoSrc} 
-                                            className="absolute inset-0 w-full h-full z-20" 
-                                            allowFullScreen 
-                                            scrolling="no" 
-                                            frameBorder="0" 
-                                            allow="autoplay"
-                                            onLoad={() => setVideoLoading(false)} // 加载完隐藏转圈
-                                        />
-                                    </>
+                                    <iframe src={videoSrc} className="absolute inset-0 w-full h-full z-20" allowFullScreen scrolling="no" frameBorder="0" allow="autoplay" />
                                 ) : (
-                                    <div 
-                                        className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer group hover:brightness-110 transition-all" 
-                                        style={coverStyle}
-                                        onClick={handlePlay}
-                                    >
-                                        {/* 遮罩层，让文字更清晰 */}
-                                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors"></div>
-                                        
-                                        <div className="relative z-10 w-16 h-16 bg-blue-600/90 backdrop-blur rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 mb-3 border border-white/20">
-                                            <Play size={32} className="ml-1 text-white fill-current" />
-                                        </div>
-                                        <span className="relative z-10 text-sm font-medium text-white/90 group-hover:text-white transition-colors bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">点击播放教程</span>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer group" style={{background: 'linear-gradient(135deg, #1e293b, #0f172a)'}} onClick={() => setIsPlaying(true)}>
+                                        <div className="relative z-10 w-16 h-16 bg-blue-600/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"><Play size={32} className="ml-1 text-white fill-current" /></div>
+                                        <span className="mt-3 text-sm font-medium text-white/90 bg-black/50 px-3 py-1 rounded-full">点击播放教程</span>
                                     </div>
                                 )
-                            ) : (
-                                <div className="absolute inset-0 flex items-center justify-center text-slate-500 bg-slate-900">无预览视频</div>
-                            )}
+                            ) : <div className="absolute inset-0 flex items-center justify-center text-slate-500">无预览视频</div>}
                         </div>
-
-                        <div className="flex gap-3 mt-4">
-                            {item.link && <a href={item.link} target="_blank" className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-semibold transition-colors shadow-lg shadow-blue-900/20"><CloudDownload size={20}/> 下载网盘</a>}
-                            {item.backup_link && <a href={item.backup_link} target="_blank" className="flex-1 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-xl font-semibold transition-colors shadow-lg shadow-purple-900/20"><HardDrive size={20}/> 备用网盘</a>}
+                        <div className="mt-4">
+                            {item.link && <a href={item.link} target="_blank" className="block w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold text-center shadow-lg transition flex items-center justify-center gap-2"><CloudDownload size={20}/> 下载网盘资源</a>}
                         </div>
                     </div>
                     <div className="lg:w-5/12 p-5 bg-black/20 border-l border-white/5 flex flex-col">
-                        <div className="mb-4 bg-black/40 border border-white/10 rounded-lg p-3">
-                            <div className="flex justify-between mb-1.5"><span className="text-xs text-slate-300">开启任何来源命令：</span>{copied && <span className="text-[10px] text-green-400">已复制!</span>}</div>
-                            <code className="text-xs font-mono text-green-400 bg-black/50 p-2 block rounded cursor-pointer hover:bg-blue-900/20 transition-colors" onClick={handleCopy}>sudo spctl --master-disable</code>
+                        <div className="mb-4 bg-black/40 border border-white/10 rounded-lg p-3 cursor-pointer hover:bg-black/60 transition" onClick={handleCopy}>
+                            <div className="flex justify-between mb-1"><span className="text-xs text-slate-400">点击复制开启命令：</span>{copied && <span className="text-[10px] text-green-400">已复制!</span>}</div>
+                            <code className="text-xs font-mono text-green-400">sudo spctl --master-disable</code>
                         </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 mb-4 h-[100px]"><p className="text-slate-200 text-sm whitespace-pre-line leading-relaxed">{item.desc}</p></div>
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10 mt-auto">
-                            <div className="bg-black/30 p-3 rounded-xl border border-white/10 text-center hover:bg-black/40 transition-colors">
-                                <div className="aspect-square bg-slate-800 rounded-lg mb-2 overflow-hidden"><img src="./wx.jpg" alt="WeChat" className="w-full h-full object-cover" /></div>
-                                <p className="text-amber-400 font-bold text-xs">远程安装 ¥15</p>
-                            </div>
-                            <div className="bg-black/30 p-3 rounded-xl border border-white/10 text-center hover:bg-black/40 transition-colors">
-                                <div className="aspect-square bg-slate-800 rounded-lg mb-2 overflow-hidden"><img src="./pay.jpg" alt="Donate" className="w-full h-full object-cover" /></div>
-                                <p className="text-pink-400 font-bold text-xs">打赏博主</p>
-                            </div>
-                        </div>
+                        <p className="text-slate-300 text-sm whitespace-pre-line leading-relaxed flex-1">{item.desc}</p>
                     </div>
                 </div>
             );
         };
-        
+
         const App = () => {
             const [searchQuery, setSearchQuery] = useState('');
-            const [softwareData, setSoftwareData] = useState([]);
+            const [list, setList] = useState([]);
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
-                const cacheBuster = "&t=" + Date.now();
-                Papa.parse(SHEET_URL + cacheBuster, {
-                    download: true,
-                    header: true,
-                    complete: (results) => {
-                        console.log("表格数据:", results.data);
-                        setSoftwareData(results.data.filter(item => item.title).reverse()); 
-                        setLoading(false);
-                    },
-                    error: (err) => {
-                        console.error("表格读取失败:", err);
-                        setLoading(false);
-                    }
-                });
+                // 读取 data.json，加时间戳防止缓存
+                fetch(DATA_URL + '?t=' + Date.now()).then(r => r.json()).then(data => {
+                    setList(data); setLoading(false);
+                }).catch(e => { console.error(e); setLoading(false); });
             }, []);
 
-            const filteredData = useMemo(() => {
-                if (!searchQuery) return softwareData;
-                return softwareData.filter(i => 
-                    (i.title && i.title.toLowerCase().includes(searchQuery.toLowerCase())) || 
-                    (i.desc && i.desc.toLowerCase().includes(searchQuery.toLowerCase()))
-                );
-            }, [searchQuery, softwareData]);
+            const filtered = useMemo(() => list.filter(i => !searchQuery || JSON.stringify(i).toLowerCase().includes(searchQuery.toLowerCase())), [searchQuery, list]);
 
             return (
-                <div className="min-h-screen flex flex-col pb-10 container mx-auto px-4 lg:px-8 max-w-[1400px]">
-                    <Header /><SearchBar value={searchQuery} onChange={setSearchQuery} />
-                    
-                    <div className="space-y-12 mt-8">
-                        {loading ? (
-                             // 👇 这里是新的加载状态：显示3个骨架屏，而不是文字
-                             <>
-                                <SkeletonCard />
-                                <SkeletonCard />
-                                <SkeletonCard />
-                             </>
-                        ) : filteredData.length > 0 ? (
-                            filteredData.map((item, index) => <SoftwareCard key={item.id || index} item={item} />)
-                        ) : (
-                            <div className="text-center py-20 text-slate-500"><Inbox size={48} className="mx-auto mb-4 opacity-50"/><p>未找到内容 (请检查谷歌表格是否有数据)</p></div>
-                        )}
-                    </div>
-                    <footer className="mt-20 border-t border-white/10 py-12 text-center text-slate-400 text-sm">&copy; 2025 苹巨匠科技</footer>
+                <div className="min-h-screen container mx-auto px-4 py-10 max-w-5xl pb-20">
+                    <h1 className="text-4xl md:text-5xl font-black text-center mb-8"><span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">苹巨匠科技</span></h1>
+                    <input type="text" className="w-full max-w-xl mx-auto block bg-slate-900/80 backdrop-blur border border-slate-700 rounded-full py-4 px-6 text-white text-lg mb-12 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-900 transition-all shadow-xl placeholder-slate-500" placeholder="🔍 搜索软件名称..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+
+                    {loading ? (
+                        <div className="text-center py-20 text-slate-500 animate-pulse">正在加载最新数据...</div>
+                    ) : filtered.length > 0 ? (
+                        filtered.map((item, i) => <SoftwareCard key={i} item={item} />)
+                    ) : (
+                        <div className="text-center py-20 text-slate-500">未找到相关内容</div>
+                    )}
+
+                    <footer className="mt-12 text-center text-slate-600 text-sm">&copy; 2025 苹巨匠科技</footer>
                 </div>
             );
         };
