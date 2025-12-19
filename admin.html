@@ -1,168 +1,144 @@
+<?php
+session_start();
+
+// ================= 配置区 =================
+// 1. 这里是你要的固定账号密码
+$ADMIN_USER = 'zs10272891';
+$ADMIN_PASS = 'Zhangsheng520';
+
+// 2. 数据文件路径
+$DATA_FILE = 'data.json';
+
+// ================= Token 处理逻辑 =================
+// 注意：由于我不知道你的Token，第一次使用时，请手动把你的Token填在下面 $initial_token 引号里
+// 只要运行一次，它就会被保存起来。
+$initial_token = ""; // <--- 在这里填入你的 Github/Cloudflare Token
+
+// Token 存储文件 (为了不让你每次都改代码，我们把它存在一个隐藏文件里)
+$token_file = '.token_secret'; 
+
+// 如果有初始Token且文件不存在，先存进去
+if (!empty($initial_token) && !file_exists($token_file)) {
+    file_put_contents($token_file, $initial_token);
+}
+
+// 读取当前使用的 Token
+$CURRENT_TOKEN = file_exists($token_file) ? file_get_contents($token_file) : $initial_token;
+// ============================================
+
+// 登录逻辑
+if (isset($_POST['login'])) {
+    if ($_POST['username'] === $ADMIN_USER && $_POST['password'] === $ADMIN_PASS) {
+        $_SESSION['user'] = $ADMIN_USER;
+        header('Location: admin.php');
+        exit;
+    } else {
+        $error = "账号或密码错误！";
+    }
+}
+
+// 登出
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('Location: admin.php');
+    exit;
+}
+
+// 拦截未登录
+if (!isset($_SESSION['user'])) {
+?>
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>苹巨匠 - 网站后台</title>
+    <title>苹巨匠后台登录</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.staticfile.net/vue/3.3.4/vue.global.prod.min.js"></script>
 </head>
-<body class="bg-slate-100 min-h-screen p-4 md:p-8 font-sans">
-    <div id="app" class="max-w-6xl mx-auto">
-        <div v-if="!isLoggedIn" class="max-w-md mx-auto mt-20 bg-white p-8 rounded-2xl shadow-xl border-t-4 border-blue-600">
-            <h1 class="text-2xl font-bold text-center mb-6 text-slate-800">管理员登录</h1>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1">账号</label>
-                    <input type="text" v-model="form.user" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="请输入账号">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1">密码</label>
-                    <input type="password" v-model="form.pass" @keyup.enter="login" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="请输入密码">
-                </div>
-                <button @click="login" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold transition shadow-lg shadow-blue-500/30">登录后台</button>
+<body class="bg-slate-900 flex items-center justify-center min-h-screen">
+    <div class="bg-slate-800 p-8 rounded-xl shadow-2xl w-full max-w-md border border-slate-700">
+        <h2 class="text-2xl font-bold text-white mb-6 text-center">苹巨匠控制台</h2>
+        <?php if(isset($error)) echo "<p class='text-red-500 mb-4 text-center bg-red-500/10 p-2 rounded'>$error</p>"; ?>
+        <form method="post" class="space-y-4">
+            <div>
+                <label class="block text-slate-400 text-sm mb-1">账号</label>
+                <input type="text" name="username" class="w-full bg-slate-700 text-white rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
-        </div>
-
-        <div v-else class="animate-fade-in">
-            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                <h1 class="text-3xl font-black text-slate-800 tracking-tight">内容管理系统</h1>
-                <div class="flex gap-3">
-                    <button @click="loadData" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium">🔄 刷新数据</button>
-                    <button @click="saveToGithub" :disabled="saving" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold shadow-lg shadow-green-500/30 flex items-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span v-if="saving" class="animate-spin text-xl">⟳</span>
-                        {{ saving ? '正在发布...' : '🚀 保存并发布' }}
-                    </button>
-                    <button @click="logout" class="px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg font-medium">退出</button>
-                </div>
+            <div>
+                <label class="block text-slate-400 text-sm mb-1">密码</label>
+                <input type="password" name="password" class="w-full bg-slate-700 text-white rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
-
-            <button @click="add" class="w-full py-4 mb-6 border-2 border-dashed border-slate-300 rounded-xl text-slate-400 hover:text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition font-bold text-lg flex justify-center items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                + 添加新软件 (点击将在下方生成新卡片)
-            </button>
-
-            <div class="space-y-4">
-                <div v-for="(item, index) in list" :key="index" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition duration-200 group relative">
-                    <span class="absolute top-4 right-12 text-xs font-mono text-gray-300">#{{ list.length - index }}</span>
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex-1 mr-4">
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">标题</label>
-                            <input v-model="item.title" class="w-full text-lg font-bold text-slate-800 border-b-2 border-transparent focus:border-blue-500 outline-none bg-transparent placeholder-slate-300" placeholder="输入软件标题...">
-                        </div>
-                        <button @click="remove(index)" class="text-slate-300 hover:text-red-500 transition p-1 rounded-full hover:bg-red-50" title="删除">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">网盘链接</label>
-                            <input v-model="item.link" class="w-full p-2 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm font-mono text-blue-600" placeholder="https://...">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">B站视频 BV号 (不含代码)</label>
-                            <input v-model="item.bvid" class="w-full p-2 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm font-mono text-purple-600" placeholder="例如: BV1rm41127xc">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">描述文案</label>
-                        <textarea v-model="item.desc" rows="2" class="w-full p-3 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm text-slate-600 resize-none" placeholder="输入软件描述..."></textarea>
-                    </div>
-                </div>
-            </div>
-            
-        </div>
+            <button type="submit" name="login" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded transition">登 录</button>
+        </form>
     </div>
+</body>
+</html>
+<?php
+    exit;
+}
 
-    <script>
-        const { createApp, ref } = Vue;
+// ================= 已登录区域 =================
+
+// 处理数据保存
+$message = '';
+if (isset($_POST['save_data'])) {
+    $json_data = $_POST['json_data'];
+    // 简单的 JSON 验证
+    if (json_decode($json_data) != null) {
+        file_put_contents($DATA_FILE, $json_data);
         
-        // 🔐 配置区域
-        const P1 = 'ghp_p5bxRV9IrM0';
-        const P2 = 'XyqchB15eMWruR';
-        const P3 = 'pgTWu36ucY7';
-        const HIDDEN_TOKEN = P1 + P2 + P3; 
-        
-        const MY_REPO = 'zesonabc/zees-web'; 
-        const ADMIN_USER = 'zs10272891'; 
-        const ADMIN_PASS = 'Zhangsheng520.'; 
+        // 如果用户在后台更新了 Token，也顺便存一下
+        if (!empty($_POST['auth_token'])) {
+            file_put_contents($token_file, $_POST['auth_token']);
+            $CURRENT_TOKEN = $_POST['auth_token'];
+        }
 
-        createApp({
-            setup() {
-                const isLoggedIn = ref(localStorage.getItem('is_admin_logged') === 'true');
-                const form = ref({ user: '', pass: '' });
-                const list = ref([]);
-                const saving = ref(false);
-                const fileSha = ref(''); 
+        $message = "保存成功！页面已更新。";
+    } else {
+        $message = "JSON 格式错误，保存失败！";
+    }
+}
 
-                const login = () => {
-                    if (form.value.user === ADMIN_USER && form.value.pass === ADMIN_PASS) {
-                        isLoggedIn.value = true;
-                        localStorage.setItem('is_admin_logged', 'true');
-                        loadData();
-                    } else {
-                        alert('账号或密码错误！');
-                    }
-                };
+// 读取当前 JSON
+$current_data = file_exists($DATA_FILE) ? file_get_contents($DATA_FILE) : '[]';
+?>
 
-                const logout = () => {
-                    localStorage.removeItem('is_admin_logged');
-                    isLoggedIn.value = false;
-                    form.value = { user: '', pass: '' };
-                };
+<!DOCTYPE html>
+<html>
+<head>
+    <title>数据管理 - 苹巨匠</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-200 min-h-screen p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-white">后台数据管理</h1>
+            <a href="?logout" class="text-red-400 hover:text-red-300 text-sm">退出登录</a>
+        </div>
 
-                const loadData = async () => {
-                    try {
-                        const url = `https://api.github.com/repos/${MY_REPO}/contents/data.json`;
-                        const res = await fetch(url, { headers: { 'Authorization': `token ${HIDDEN_TOKEN}` } });
-                        if(!res.ok) throw new Error('读取失败，请检查配置');
-                        const data = await res.json();
-                        fileSha.value = data.sha;
-                        const content = decodeURIComponent(escape(atob(data.content)));
-                        list.value = JSON.parse(content);
-                    } catch (e) {
-                        alert('加载数据失败: ' + e.message);
-                    }
-                };
+        <?php if($message): ?>
+            <div class="bg-blue-900/50 border border-blue-500/50 text-blue-200 p-4 rounded mb-6">
+                <?php echo $message; ?>
+            </div>
+        <?php endif; ?>
 
-                const saveToGithub = async () => {
-                    if(!confirm('确定要发布更新到网站吗？')) return;
-                    saving.value = true;
-                    try {
-                        const content = JSON.stringify(list.value, null, 2);
-                        const base64Content = btoa(unescape(encodeURIComponent(content)));
-                        const url = `https://api.github.com/repos/${MY_REPO}/contents/data.json`;
-                        const res = await fetch(url, {
-                            method: 'PUT',
-                            headers: { 
-                                'Authorization': `token ${HIDDEN_TOKEN}`, 
-                                'Content-Type': 'application/json' 
-                            },
-                            body: JSON.stringify({ 
-                                message: 'Update from Admin Panel', 
-                                content: base64Content, 
-                                sha: fileSha.value 
-                            })
-                        });
+        <form method="post" class="space-y-6">
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <label class="block text-white font-bold mb-2">JSON 数据内容</label>
+                <p class="text-xs text-slate-400 mb-2">格式: [{"title":"标题", "bvid":"视频号", "link":"网盘链接", "desc":"描述"}]</p>
+                <textarea name="json_data" rows="15" class="w-full bg-slate-900 text-green-400 font-mono text-sm p-4 rounded-lg border border-slate-700 focus:outline-none focus:border-blue-500"><?php echo htmlspecialchars($current_data); ?></textarea>
+            </div>
 
-                        if(!res.ok) throw new Error('保存失败');
-                        const resData = await res.json();
-                        fileSha.value = resData.content.sha;
-                        alert('🎉 发布成功！网站稍后会自动更新。');
-                    } catch (e) { alert('保存失败: ' + e.message); } finally { saving.value = false; }
-                };
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <label class="block text-white font-bold mb-2">API Token (可选更新)</label>
+                <input type="text" name="auth_token" value="<?php echo htmlspecialchars($CURRENT_TOKEN); ?>" class="w-full bg-slate-900 text-slate-300 p-2 rounded border border-slate-700" placeholder="在此处输入新的 Token 可覆盖旧的">
+            </div>
 
-                // 点击添加时，unshift 会自动加到数组最前面
-                const add = () => list.value.unshift({ title: '', desc: '', link: '', bvid: '' });
-                const remove = (i) => confirm('确定删除?') && list.value.splice(i, 1);
-
-                if(isLoggedIn.value) loadData();
-
-                return { isLoggedIn, form, list, saving, login, logout, loadData, saveToGithub, add, remove };
-            }
-        }).mount('#app');
-    </script>
+            <div class="flex gap-4">
+                <button type="submit" name="save_data" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg shadow-lg transition">保存更改</button>
+                <a href="index.html" target="_blank" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-center font-bold py-3 rounded-lg transition">查看主页</a>
+            </div>
+        </form>
+    </div>
 </body>
 </html>
