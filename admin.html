@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>苹巨匠 - 网站后台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.staticfile.net/vue/3.3.4/vue.global.prod.min.js"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 md:p-8 font-sans">
+    <div id="app" class="max-w-6xl mx-auto">
+        <div v-if="!token" class="max-w-md mx-auto mt-20 bg-white p-8 rounded-2xl shadow-xl">
+            <h1 class="text-2xl font-bold text-center mb-6 text-slate-800">管理员登录</h1>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">GitHub Token (密钥)</label>
+                    <input type="password" v-model="inputToken" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="粘贴 ghp_ 开头的密钥">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">仓库路径</label>
+                    <input type="text" v-model="repo" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="用户名/仓库名">
+                    <p class="text-xs text-gray-400 mt-1">例如: zesonabc/zees-web</p>
+                </div>
+                <button @click="saveConfig" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold transition shadow-lg shadow-blue-500/30">进入后台</button>
+            </div>
+        </div>
+
+        <div v-else class="animate-fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                <h1 class="text-3xl font-black text-slate-800 tracking-tight">内容管理系统</h1>
+                <div class="flex gap-3">
+                    <button @click="loadData" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium">🔄 刷新</button>
+                    <button @click="saveToGithub" :disabled="saving" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold shadow-lg shadow-green-500/30 flex items-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span v-if="saving" class="animate-spin text-xl">⟳</span>
+                        {{ saving ? '正在发布...' : '🚀 保存并发布' }}
+                    </button>
+                    <button @click="logout" class="px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg font-medium">退出</button>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div v-for="(item, index) in list" :key="index" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition duration-200 group">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1 mr-4">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">标题</label>
+                            <input v-model="item.title" class="w-full text-lg font-bold text-slate-800 border-b-2 border-transparent focus:border-blue-500 outline-none bg-transparent placeholder-slate-300" placeholder="输入软件标题...">
+                        </div>
+                        <button @click="remove(index)" class="text-slate-300 hover:text-red-500 transition p-1 rounded-full hover:bg-red-50">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">网盘链接</label>
+                            <input v-model="item.link" class="w-full p-2 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm font-mono text-blue-600" placeholder="https://...">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">B站视频 BV号 (不含代码)</label>
+                            <input v-model="item.bvid" class="w-full p-2 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm font-mono text-purple-600" placeholder="例如: BV1rm41127xc">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">描述文案</label>
+                        <textarea v-model="item.desc" rows="2" class="w-full p-3 bg-slate-50 rounded border border-slate-200 focus:border-blue-500 outline-none text-sm text-slate-600 resize-none" placeholder="输入软件描述..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <button @click="add" class="w-full py-4 mt-6 border-2 border-dashed border-slate-300 rounded-xl text-slate-400 hover:text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition font-bold text-lg flex justify-center items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                添加新软件
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref } = Vue;
+        createApp({
+            setup() {
+                const token = ref(localStorage.getItem('gh_token') || '');
+                const repo = ref(localStorage.getItem('gh_repo') || 'zesonabc/zees-web');
+                const inputToken = ref('');
+                const list = ref([]);
+                const saving = ref(false);
+                const fileSha = ref(''); 
+
+                const saveConfig = () => {
+                    if(!inputToken.value) return alert('请输入 Token');
+                    if(!inputToken.value.startsWith('ghp_')) alert('⚠️ 提示: Token 通常以 ghp_ 开头，请检查是否复制正确');
+                    localStorage.setItem('gh_token', inputToken.value);
+                    localStorage.setItem('gh_repo', repo.value);
+                    token.value = inputToken.value;
+                    loadData();
+                };
+
+                const logout = () => {
+                    localStorage.removeItem('gh_token');
+                    token.value = '';
+                    inputToken.value = '';
+                };
+
+                const loadData = async () => {
+                    try {
+                        const url = `https://api.github.com/repos/${repo.value}/contents/data.json`;
+                        const res = await fetch(url, { headers: { 'Authorization': `token ${token.value}` } });
+                        if(!res.ok) throw new Error('读取失败！请检查 Token 是否正确，或者仓库名是否写对 (注意大小写)');
+                        const data = await res.json();
+                        fileSha.value = data.sha;
+                        // 解决中文乱码问题
+                        const content = decodeURIComponent(escape(atob(data.content)));
+                        list.value = JSON.parse(content);
+                    } catch (e) {
+                        alert('加载失败: ' + e.message);
+                        if(e.message.includes('404')) alert('找不到 data.json 文件，请确认第1步是否创建成功');
+                    }
+                };
+
+                const saveToGithub = async () => {
+                    if(!confirm('确定要发布更新到网站吗？')) return;
+                    saving.value = true;
+                    try {
+                        const content = JSON.stringify(list.value, null, 2);
+                        const base64Content = btoa(unescape(encodeURIComponent(content)));
+                        const url = `https://api.github.com/repos/${repo.value}/contents/data.json`;
+                        const res = await fetch(url, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `token ${token.value}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message: 'Update from Admin', content: base64Content, sha: fileSha.value })
+                        });
+                        if(!res.ok) throw new Error('保存失败');
+                        const resData = await res.json();
+                        fileSha.value = resData.content.sha;
+                        alert('🎉 发布成功！网站稍后会自动更新。');
+                    } catch (e) { alert('保存失败: ' + e.message); } finally { saving.value = false; }
+                };
+
+                const add = () => list.value.unshift({ title: '', desc: '', link: '', bvid: '' });
+                const remove = (i) => confirm('确定删除这个软件吗?') && list.value.splice(i, 1);
+
+                if(token.value) loadData();
+
+                return { token, repo, inputToken, list, saving, saveConfig, logout, loadData, saveToGithub, add, remove };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
