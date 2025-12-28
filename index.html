@@ -95,6 +95,14 @@
 
         const Card = ({ item, isActive, onPlay }) => {
             const [copied, setCopied] = useState(false);
+            const [resetId, setResetId] = useState(0); // 用于强制刷新 iframe 的 key
+
+            // 当视频失去焦点时（isActive 变为 false），更新 resetId 以强制重置 iframe
+            useEffect(() => {
+                if (!isActive) {
+                    setResetId(prev => prev + 1);
+                }
+            }, [isActive]);
 
             const copyCode = () => {
                 navigator.clipboard.writeText('sudo spctl --master-disable');
@@ -103,8 +111,8 @@
             };
 
             const bv = extractBV(item.bvid || '');
-            // 核心修改：isActive时开启自动播放
-            const videoUrl = bv ? `//player.bilibili.com/player.html?bvid=${bv}&page=1&high_quality=1&danmaku=0&autoplay=${isActive ? 1 : 0}` : '';
+            // 优化：始终使用 autoplay=0。点击封面只移除遮罩，不重新加载 iframe，实现“零延迟”。
+            const videoUrl = bv ? `//player.bilibili.com/player.html?bvid=${bv}&page=1&high_quality=1&danmaku=0&autoplay=0` : '';
 
             return (
                 <div className="glass-card rounded-2xl overflow-hidden mb-8 flex flex-col md:flex-row hover:border-white/20 transition duration-300 shadow-2xl">
@@ -119,12 +127,12 @@
                             {bv ? (
                                 <div className="relative w-full h-full">
                                     {/* 
-                                      利用 key={isActive} 强制重置 iframe 
-                                      当 isActive 从 true 变为 false 时，iframe 会被销毁并重建，
-                                      src 重新加载，autoplay=0 生效，从而停止播放并显示封面。
+                                      稳定 Iframe 策略：
+                                      key 仅在 resetId 变化时改变（即失去焦点时）。
+                                      当 isActive 变为 true 时，key 不变，iframe 不重载，遮罩直接消失 -> 瞬间响应。
                                     */}
                                     <iframe
-                                        key={isActive ? 'playing' : 'stopped'}
+                                        key={resetId}
                                         src={videoUrl}
                                         className="w-full h-full absolute inset-0"
                                         frameBorder="0"
@@ -134,15 +142,15 @@
                                     ></iframe>
 
                                     {/* 
-                                      控制层：当不处于激活状态时，覆盖在 iframe 上拦截点击。
-                                      点击后触发 onPlay，将当前卡片设为 active，才允许操作 iframe。
+                                      控制层：点击后消失，露出下方的 iframe。
+                                      此时 iframe 已经加载完毕，用户可以直接点击 B 站播放按钮。
                                     */}
                                     {!isActive && (
                                         <div
                                             className="absolute inset-0 z-10 cursor-pointer bg-transparent hover:bg-black/10 transition-colors flex items-center justify-center"
                                             onClick={onPlay}
                                         >
-                                            {/* 可选：可以在这里加一个播放按钮图标提示用户点击 */}
+                                            {/* 可选：播放按钮图标 */}
                                         </div>
                                     )}
                                 </div>
