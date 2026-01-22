@@ -1,7 +1,7 @@
 [
   {
     "title": "苹巨匠Utm支持M芯片intel",
-    "desc": "1️⃣ 拒绝黑屏： 第一次启动如果看到黑底黄字的UEFI Shell，别慌！记得点重启并在3秒内疯狂按回车键！⌨️ 2️⃣ 拒绝卡死： 到了“连接网络”或“检查更新”如果一直转圈不动： 👉 键盘按下 Shift + F10 (或 Fn+Shift+F10) 👉 在黑框里输入神秘代码：OOBE\\BYPASSNRO 👉 电脑重启后，选“我没有Internet连接”就能直接进桌面啦！✨\n\n3️⃣ 变流畅的关键： 进桌面后一定要安装驱动（SPICE Guest Tools），不然分辨率很低且没网哦！🛠️",
+    "desc": "1️⃣ 拒绝黑屏： 第一次启动如果看到黑底黄字的UEFI Shell，别慌！记得点重启并在3秒内疯狂按回车键！\n2️⃣ 拒绝卡死： 到了“连接网络”或“检查更新”如果一直转圈不动： 👉 键盘按下 Shift + F10 (或 Fn+Shift+F10) 👉 在黑框里输入神秘代码：OOBE\\BYPASSNRO 👉 电脑重启后，选“我没有Internet连接”就能直接进桌面啦！✨\n3️⃣ 变流畅的关键： 进桌面后一定要安装驱动（SPICE Guest Tools），不然分辨率很低且没网哦！🛠️",
     "link": "https://pan.quark.cn/s/7d9cfb236deb",
     "bvid": "<iframe src=\"//player.bilibili.com/player.html?isOutside=true&aid=115933867673468&bvid=BV1a2zjBYEs3&cid=35530344034&p=1\" scrolling=\"no\" border=\"0\" frameborder=\"no\" framespacing=\"0\" allowfullscreen=\"true\"></iframe>"
   },
