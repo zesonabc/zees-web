@@ -67,7 +67,7 @@
   },
   {
     "title": "FBI警告! After Effects 2025",
-    "desc": "安装After Effects 2025前，请卸载旧版本的AE！！",
+    "desc": "关闭AE，回到电脑桌面，点击左上角菜单栏，前往-前往文件夹\n输入/Library/Application Support/Adobe/After Effects/25.0/AMT/，回车\n将application.xml文件，拖动到桌面\n查找Languages，找到图中位置，将en_US改为zh_CN\n改好后保存，然后拖回到原来的位置，替换即可",
     "link": "https://pan.quark.cn/s/10edad23cd91#/list/share",
     "bvid": "BV1YGNbzvEyx"
   },
